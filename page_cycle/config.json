@@ -1,0 +1,18 @@
+{
+    "config": {
+        "logging": "False",
+        "full_screen": "True"
+    },
+    "webpages": [
+        {
+            "url": "http://www.google.com",
+            "time": "7",
+            "refresh_cycles": "0"
+        },
+        {
+            "url": "http://www.bing.com",
+            "time": "7",
+            "refresh_cycles": "3"
+        }
+    ]
+}
