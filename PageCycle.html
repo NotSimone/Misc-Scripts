@@ -1,0 +1,234 @@
+<!-- Page Cycling -->
+<!-- 24/06/20 Simon Hua -->
+
+<link rel="stylesheet" href="node/node_modules/bootstrap/dist/css/bootstrap.css" />
+<script src="node/node_modules/jquery/dist/jquery.js"></script>
+<script src="node/node_modules/bootstrap/dist/js/bootstrap.js"></script>
+
+<!-- Custom CSS -->
+<style>
+	.centre-label {
+		line-height: 34px;
+	}
+</style>
+
+<!-- Page contents -->
+<div class="container-fluid">
+	<div id="iframe_container"></div>
+	<hr />
+	<div class="row">
+		<div class="col-md-4"></div>
+		<div class="col-md-6">
+			<h3>URL Configurator</h3>
+			<div id="configurator_input_url"></div>
+			<div class="form-group row">
+				<div class="col-md-6">
+					<label class="centre-label">Cycle Time (s)</label>
+				</div>
+				<div class="col-md-3">
+					<input type="number" class="form-control" id="configurator_time" />
+				</div>
+				<div class="col-md-3">
+					<button type="button" class="btn btn-default" id="configurator_add_url">Add URL</button>
+				</div>
+			</div>
+			<div class="form-group row">
+				<div class="col-md-3">
+					<label class="centre-label">Generated URL</label>
+				</div>
+				<div class="col-md-6">
+					<input type="text" class="form-control" id="configurator_output_url" />
+				</div>
+				<div class="col-md-3">
+					<button type="button" class="btn btn-default" id="configurator_generate">Generate</button>
+					<button type="button" class="btn btn-default" id="configurator_copy">Copy</button>
+				</div>
+			</div>
+		</div>
+		<div class="col-md-2"></div>
+	</div>
+</div>
+
+<script>
+	let pages = [];
+	let cycle_time = 5000;
+	let current_index = 0;
+	let url_count = 0;
+	let cycle_id;
+
+	$().ready(function () {
+		console.log("Loading URLs");
+		get_config();
+
+		console.log("Creating iframes");
+		generate_iframes();
+
+		console.log("Starting timer");
+		cycle_id = setInterval(cycle_page, cycle_time);
+
+		console.log("Loading configurator");
+		load_configurator();
+
+		console.log("Bind callbacks");
+		bind_callbacks();
+	});
+
+	// Get the config from the URL
+	function get_config() {
+		let param_index = 0;
+		let param_url = decodeURIComponent(
+			get_param("url" + param_index.toString())
+		);
+		let param_time = get_param("time");
+
+		while (param_url != null) {
+			pages.push({ url: decodeURIComponent(param_url) });
+			console.log("Loaded: " + param_url);
+			param_index += 1;
+			param_url = get_param("url" + param_index.toString());
+		}
+
+		if (param_time != null) cycle_time = param_time * 1000;
+	}
+
+	// Generate the iframes and make them hidden
+	function generate_iframes() {
+		let $container = $("#iframe_container");
+		for (let index = 0; index < pages.length; index++) {
+			// Generate the element and add the reference
+			$new_iframe = $(
+				"<iframe src=" +
+				pages[index].url +
+				" style=\"width: 100%; height: 97%;\"></iframe>"
+			);
+			$container.append($new_iframe);
+			pages[index].$ref = $new_iframe;
+			if (index != 0) pages[index].$ref.hide();
+		}
+	}
+
+	// Cycles the page by one
+	function cycle_page() {
+		pages[current_index].$ref.hide();
+		current_index += 1;
+		if (current_index >= pages.length) current_index = 0;
+		pages[current_index].$ref.show();
+	}
+
+	// Populate the configurator
+	function load_configurator() {
+		let param_time = get_param("time");
+		if (param_time != null) {
+			$("#configurator_time").val(param_time);
+		}
+		let $url_input = $("#configurator_input_url");
+		for (let index = 0; index < pages.length; index++) {
+			let $new_url = $("\
+				<div class=\"form-group row\">\
+					<div class=\"col-md-3\">\
+						<label class=\"centre-label\">URL " + index + "</label>\
+					</div>\
+					<div class=\"col-md-6\">\
+						<input type=\"text\" class=\"form-control\" id=\"input_url\" />\
+					</div>\
+					<div class=\"col-md-3\"></div>\
+				</div>\
+			");
+			$new_url.find("#input_url").val(pages[index].url);
+			$url_input.append($new_url);
+			url_count += 1;
+		}
+	}
+
+	// Add new url option
+	function add_url() {
+		let $url_input = $("#configurator_input_url");
+		url_count += 1;
+		let $new_url = $("\
+				<div class=\"form-group row\">\
+					<div class=\"col-md-3\">\
+						<label class=\"centre-label\">URL " + url_count + "</label>\
+					</div>\
+					<div class=\"col-md-6\">\
+						<input type=\"text\" class=\"form-control\" id=\"input_url\"/>\
+					</div>\
+					<div class=\"col-md-3\"></div>\
+				</div>\
+			");
+		$url_input.append($new_url);
+	}
+
+	// URL generation handler
+	function generate_URL() {
+		let url_list = [];
+		$("#configurator_input_url .form-control").each(function (index) {
+			if ($(this).val() != "") url_list.push(encodeURIComponent($(this).val()))
+		})
+		console.log("Generating URL");
+		console.log(url_list);
+
+		let base_url = window.location.origin + window.location.pathname;
+		console.log("Base url: " + base_url);
+
+		time = $("#configurator_time").val();
+
+		let generated_url = base_url + "?time=" + time
+		url_list.forEach(function(element, index) {
+			generated_url += "&url" + index + "=" + element
+		})
+
+		$("#configurator_output_url").val(generated_url);
+	}
+
+	// URL copy handler
+	function copy_URL() {
+		$generated_url = $("#configurator_output_url");
+		$generated_url.select();
+		document.execCommand("copy");
+	}
+
+	// Function binding
+	function bind_callbacks() {
+		$("#configurator_generate").click(generate_URL);
+		$("#configurator_copy").click(copy_URL);
+		$("#configurator_add_url").click(add_url);
+	}
+
+	// Sets a url parameter
+	// https://stackoverflow.com/questions/6899097/how-to-add-a-parameter-to-the-url
+	function set_param(name, value) {
+		let l = window.location;
+		let params = {};
+		let x = /(?:\??)([^=&?]+)=?([^&?]*)/g;
+		let s = l.search;
+		for (let r = x.exec(s); r; r = x.exec(s)) {
+			r[1] = decodeURIComponent(r[1]);
+			if (!r[2]) r[2] = "%%";
+			params[r[1]] = r[2];
+		}
+		params[name] = encodeURIComponent(value);
+		let search = [];
+		for (let i in params) {
+			let p = encodeURIComponent(i);
+			let v = params[i];
+			if (v != "%%") p += "=" + v;
+			search.push(p);
+		}
+		search = search.join("&");
+		l.search = search;
+	}
+
+	// Gets url parameters
+	// Needed because IE does not support URLSearchParams
+	// https://stackoverflow.com/questions/45758837/script5009-urlsearchparams-is-undefined-in-ie-11
+	function get_param(name) {
+		let results = new RegExp("[\?&]" + name + "=([^&#]*)").exec(
+			window.location.href
+		);
+		if (results == null) {
+			return null;
+		} else {
+			return decodeURI(results[1]) || 0;
+		}
+	}
+</script>
